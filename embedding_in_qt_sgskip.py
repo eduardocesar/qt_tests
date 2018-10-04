@@ -1,13 +1,4 @@
-"""
-===============
-Embedding in Qt
-===============
-
-Simple Qt application embedding Matplotlib canvases.  This program will work
-equally well using Qt4 and Qt5.  Either version of Qt can be selected (for
-example) by setting the ``MPLBACKEND`` environment variable to "Qt4Agg" or
-"Qt5Agg", or by first importing the desired version of PyQt.
-"""
+# -*- coding: utf-8 -*-
 
 import sys
 import time
@@ -22,6 +13,7 @@ if is_pyqt5():
 else:
     from matplotlib.backends.backend_qt4agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
+
 from matplotlib.figure import Figure
 
 
@@ -30,39 +22,45 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         super(ApplicationWindow, self).__init__()
         self._main = QtWidgets.QWidget()
         self.setCentralWidget(self._main)
-        layout = QtWidgets.QVBoxLayout(self._main)
+        self.layout = QtWidgets.QVBoxLayout(self._main)
 
-        dynamic_canvas2 = FigureCanvas(Figure(figsize=(5, 3)))
-        layout.addWidget(dynamic_canvas2)
-        self.addToolBar(NavigationToolbar(dynamic_canvas2, self))
-
-        dynamic_canvas = FigureCanvas(Figure(figsize=(5, 3)))
-        layout.addWidget(dynamic_canvas)
-        self.addToolBar(QtCore.Qt.BottomToolBarArea,
-                        NavigationToolbar(dynamic_canvas, self))
-
-        self.x = np.linspace(0, 10, 1001)
+        self.x = np.linspace(0, 10, 2000)
         self.y = np.sin(self.x)
-        
-        self._dynamic_ax2 = dynamic_canvas2.figure.subplots()
 
-        self.line2, = self._dynamic_ax2.plot(self.x, self.y)
-        
-        self._timer2 = dynamic_canvas2.new_timer(
-            10, [(self._update_canvas2, (), {})])
-        self._timer2.start()
+        dynamic_canvas = self.create_figure(12, 3)
 
+        dynamic_canvas1 = self.create_figure(12, 3)
+        
+        dynamic_canvas2 = self.create_figure(12, 3)
+
+        # self.addToolBar(QtCore.Qt.BottomToolBarArea,
+        #                 NavigationToolbar(dynamic_canvas, self))
+        
+
+        # self.addToolBar(NavigationToolbar(dynamic_canvas, self))
+
+
+        # Plot and timer 2
+        self.line2, self.ax2 = self.create_ax(dynamic_canvas2)
+        self.timer2 = self.install_timer(self.line2, self.ax2, dynamic_canvas2)
+        
+        # Plot and timer 1
+        self.line1, self.ax1 = self.create_ax(dynamic_canvas1)
+        self.timer1 = self.install_timer(self.line1, self.ax1, dynamic_canvas1)
+
+        # Plot 0 - Trying to optimize
         self._dynamic_ax = dynamic_canvas.figure.subplots()
         self._dynamic_ax.figure.canvas.draw()
-        
-        self.line, = self._dynamic_ax.plot(self.x, self.y)
+
         self.background = self._dynamic_ax.figure.canvas.copy_from_bbox(
             self._dynamic_ax.bbox)
+        
+        self.line, = self._dynamic_ax.plot(self.x, self.y, animated=True)
 
+        # Start Timer 0
         self._timer = dynamic_canvas.new_timer(
             1, [(self._update_canvas, (), {})])
         self._timer.start()
-
 
     def _update_canvas(self):
         canvas = self._dynamic_ax.figure.canvas
@@ -75,23 +73,27 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         ax.draw_artist(self.line)
         canvas.blit(ax.bbox)
 
+    def create_figure(self, w, h):
+        dynamic_canvas = FigureCanvas(Figure(figsize=(w, h)))
+        self.layout.addWidget(dynamic_canvas)
+        return dynamic_canvas
 
-        
-    def _update_canvas2(self):
-        
-        # Shift the sinusoid as a function of time.
-        u = np.sin(10*(self.x + time.time()))
-        self.line2.set_ydata(u)
-        self._dynamic_ax2.figure.canvas.draw()
+    def create_ax(self, canvas):
+        ax = canvas.figure.subplots()
+        line, = ax.plot(self.x, self.y)
+        return line, ax
 
+    def install_timer(self, line, ax, canvas):
+        def update_canvas(line, ax):
+            u = np.sin(10*(self.x + time.time()))
+            line.set_ydata(u)
+            ax.figure.canvas.draw()
 
-    # def _update_canvas2(self):
-    #     self._dynamic_ax2.clear()
-    #     t = np.linspace(0, 10, 1001)
-    #     # Shift the sinusoid as a function of time.
-    #     self._dynamic_ax2.plot(t, np.sin(10*(t + time.time())))
-    #     self._dynamic_ax2.figure.canvas.draw()
-
+        timer = canvas.new_timer(
+            10, [(update_canvas, (line, ax), {})])
+        timer.start()
+        return timer
+    
 
 if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
