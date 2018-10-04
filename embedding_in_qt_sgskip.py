@@ -41,29 +41,52 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.addToolBar(QtCore.Qt.BottomToolBarArea,
                         NavigationToolbar(dynamic_canvas, self))
 
+        self.x = np.linspace(0, 10, 1001)
+        self.y = np.sin(self.x)
+        
+        # self._dynamic_ax2 = dynamic_canvas2.figure.subplots()
+        # self._timer2 = dynamic_canvas2.new_timer(
+        #     10, [(self._update_canvas2, (), {})])
+        # self._timer2.start()
+
         self._dynamic_ax2 = dynamic_canvas2.figure.subplots()
+        self.line2, = self._dynamic_ax2.plot(self.x, self.y)
+        
         self._timer2 = dynamic_canvas2.new_timer(
             10, [(self._update_canvas2, (), {})])
         self._timer2.start()
 
         self._dynamic_ax = dynamic_canvas.figure.subplots()
+        self.line, = self._dynamic_ax.plot(self.x, self.y)
+
         self._timer = dynamic_canvas.new_timer(
             1, [(self._update_canvas, (), {})])
         self._timer.start()
 
-    def _update_canvas(self):
-        self._dynamic_ax.clear()
-        t = np.linspace(0, 10, 1001)
-        # Shift the sinusoid as a function of time.
-        self._dynamic_ax.plot(t, np.sin(10*(t + time.time())))
-        self._dynamic_ax.figure.canvas.draw()
 
-    def _update_canvas2(self):
-        self._dynamic_ax2.clear()
-        t = np.linspace(0, 10, 1001)
+    def _update_canvas(self):
+        
         # Shift the sinusoid as a function of time.
-        self._dynamic_ax2.plot(t, np.sin(10*(t + time.time())))
+        u = np.sin(10*(self.x + time.time()))
+        self.line.set_ydata(u)
+        self._dynamic_ax.figure.canvas.draw()
+        
+    def _update_canvas2(self):
+        
+        # Shift the sinusoid as a function of time.
+        u = np.sin(10*(self.x + time.time()))
+        self.line2.set_ydata(u)
         self._dynamic_ax2.figure.canvas.draw()
+
+
+    # def _update_canvas2(self):
+    #     self._dynamic_ax2.clear()
+    #     t = np.linspace(0, 10, 1001)
+    #     # Shift the sinusoid as a function of time.
+    #     self._dynamic_ax2.plot(t, np.sin(10*(t + time.time())))
+    #     self._dynamic_ax2.figure.canvas.draw()
+
+
 if __name__ == "__main__":
     qapp = QtWidgets.QApplication(sys.argv)
     app = ApplicationWindow()
