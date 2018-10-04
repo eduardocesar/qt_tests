@@ -44,12 +44,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.x = np.linspace(0, 10, 1001)
         self.y = np.sin(self.x)
         
-        # self._dynamic_ax2 = dynamic_canvas2.figure.subplots()
-        # self._timer2 = dynamic_canvas2.new_timer(
-        #     10, [(self._update_canvas2, (), {})])
-        # self._timer2.start()
-
         self._dynamic_ax2 = dynamic_canvas2.figure.subplots()
+
         self.line2, = self._dynamic_ax2.plot(self.x, self.y)
         
         self._timer2 = dynamic_canvas2.new_timer(
@@ -57,7 +53,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self._timer2.start()
 
         self._dynamic_ax = dynamic_canvas.figure.subplots()
+        self._dynamic_ax.figure.canvas.draw()
+        
         self.line, = self._dynamic_ax.plot(self.x, self.y)
+        self.background = self._dynamic_ax.figure.canvas.copy_from_bbox(
+            self._dynamic_ax.bbox)
 
         self._timer = dynamic_canvas.new_timer(
             1, [(self._update_canvas, (), {})])
@@ -65,11 +65,17 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
 
     def _update_canvas(self):
+        canvas = self._dynamic_ax.figure.canvas
+        ax = self._dynamic_ax
+        canvas.restore_region(self.background)
         
         # Shift the sinusoid as a function of time.
         u = np.sin(10*(self.x + time.time()))
         self.line.set_ydata(u)
-        self._dynamic_ax.figure.canvas.draw()
+        ax.draw_artist(self.line)
+        canvas.blit(ax.bbox)
+
+
         
     def _update_canvas2(self):
         
