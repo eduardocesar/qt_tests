@@ -15,6 +15,7 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from matplotlib.figure import Figure
+from matplotlib.animation import FuncAnimation
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):
@@ -28,10 +29,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.y = np.sin(self.x)
 
         dynamic_canvas = self.create_figure(12, 3)
-
         dynamic_canvas1 = self.create_figure(12, 3)
-        
         dynamic_canvas2 = self.create_figure(12, 3)
+        dynamic_canvas3 = self.create_figure(12, 3)
+        dynamic_canvas4 = self.create_figure(12, 3)
+
 
         # self.addToolBar(QtCore.Qt.BottomToolBarArea,
         #                 NavigationToolbar(dynamic_canvas, self))
@@ -56,7 +58,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         # Plot 1
         ax = dynamic_canvas1.figure.subplots()
         line, = ax.plot(self.x, self.y)
-        ax.figure.canvas.draw() # Caches the render
         
         # timer 1
         self.timer = dynamic_canvas1.new_timer(
@@ -64,9 +65,22 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             )
         self.timer.start()
         
-        # Plot and timer 2
-        self.line2, self.ax2 = self.create_ax(dynamic_canvas2)
-        self.timer2 = self.install_timer(self.line2, self.ax2, dynamic_canvas2)
+        # Plot 2
+        ax = dynamic_canvas2.figure.subplots()
+        line, = ax.plot(self.x, self.y)
+        ax.figure.canvas.draw() # Need to cache the render
+        
+        # timer 2
+        self.timer2 = dynamic_canvas2.new_timer(
+            10, [(self.update_canvas2, (line, ax), {})]
+            )
+        self.timer2.start()
+
+
+        # Plot 3 - Change animated and blit to True to superspeed!
+        self.ax3 = dynamic_canvas3.figure.subplots()
+        self.line3,  = self.ax3.plot(self.x, self.y, animated=False)
+        self.ani = FuncAnimation(dynamic_canvas3.figure, self.animate3, interval=0, blit=False)
 
     def _update_canvas(self):
         canvas = self._dynamic_ax.figure.canvas
@@ -82,31 +96,26 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def update_canvas1(self, line, ax):
         u = np.sin(10*(self.x + time.time()))
         line.set_ydata(u)
+        ax.figure.canvas.draw()
+
+    def update_canvas2(self, line, ax):
+        u = np.sin(10*(self.x + time.time()))
+        line.set_ydata(u)
         ax.draw_artist(ax.patch)
         ax.draw_artist(line)
         ax.figure.canvas.update()
         ax.figure.canvas.flush_events()
+
+    def animate3(self, frame):
+        u = np.sin(10*(self.x + frame/10.0))
+        self.line3.set_ydata(u)
+        return [self.line3]
 
     def create_figure(self, w, h):
         dynamic_canvas = FigureCanvas(Figure(figsize=(w, h)))
         self.layout.addWidget(dynamic_canvas)
         return dynamic_canvas
 
-    def create_ax(self, canvas):
-        ax = canvas.figure.subplots()
-        line, = ax.plot(self.x, self.y)
-        return line, ax
-
-    def install_timer(self, line, ax, canvas):
-        def update_canvas(line, ax):
-            u = np.sin(10*(self.x + time.time()))
-            line.set_ydata(u)
-            ax.figure.canvas.draw()
-
-        timer = canvas.new_timer(
-            10, [(update_canvas, (line, ax), {})])
-        timer.start()
-        return timer
     
 
 if __name__ == "__main__":
