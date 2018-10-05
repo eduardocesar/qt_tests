@@ -39,15 +39,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         # self.addToolBar(NavigationToolbar(dynamic_canvas, self))
 
-
-        # Plot and timer 2
-        self.line2, self.ax2 = self.create_ax(dynamic_canvas2)
-        self.timer2 = self.install_timer(self.line2, self.ax2, dynamic_canvas2)
-        
-        # Plot and timer 1
-        self.line1, self.ax1 = self.create_ax(dynamic_canvas1)
-        self.timer1 = self.install_timer(self.line1, self.ax1, dynamic_canvas1)
-
         # Plot 0 - Trying to optimize
         self._dynamic_ax = dynamic_canvas.figure.subplots()
         self._dynamic_ax.figure.canvas.draw()
@@ -59,8 +50,23 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         # Start Timer 0
         self._timer = dynamic_canvas.new_timer(
-            1, [(self._update_canvas, (), {})])
+            10, [(self._update_canvas, (), {})])
         self._timer.start()
+
+        # Plot 1
+        ax = dynamic_canvas1.figure.subplots()
+        line, = ax.plot(self.x, self.y)
+        ax.figure.canvas.draw() # Caches the render
+        
+        # timer 1
+        self.timer = dynamic_canvas1.new_timer(
+            10, [(self.update_canvas1, (line, ax), {})]
+            )
+        self.timer.start()
+        
+        # Plot and timer 2
+        self.line2, self.ax2 = self.create_ax(dynamic_canvas2)
+        self.timer2 = self.install_timer(self.line2, self.ax2, dynamic_canvas2)
 
     def _update_canvas(self):
         canvas = self._dynamic_ax.figure.canvas
@@ -72,6 +78,14 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.line.set_ydata(u)
         ax.draw_artist(self.line)
         canvas.blit(ax.bbox)
+                
+    def update_canvas1(self, line, ax):
+        u = np.sin(10*(self.x + time.time()))
+        line.set_ydata(u)
+        ax.draw_artist(ax.patch)
+        ax.draw_artist(line)
+        ax.figure.canvas.update()
+        ax.figure.canvas.flush_events()
 
     def create_figure(self, w, h):
         dynamic_canvas = FigureCanvas(Figure(figsize=(w, h)))
